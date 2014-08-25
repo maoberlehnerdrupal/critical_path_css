@@ -1,0 +1,9 @@
+name = Critical Path CSS
+description = Inline critical CSS styles
+package = CSS
+core = 7.x
+dependencies[] = cookie_aware_page_cache
+
+version = "7.x-1.0"
+core = "7.x"
+project = "critical_path_css"
