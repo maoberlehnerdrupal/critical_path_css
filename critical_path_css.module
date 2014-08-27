@@ -10,8 +10,8 @@
  */
 function critical_path_css_boot() {
   // After first load CSS files should already be cached
-  if (_critical_path_css_is_active() && !isset($_COOKIE['critical_path_css_cached'])) {
-    setcookie('glacier_assets_cached', TRUE, time() + 604800, '/');
+  if (_critical_path_css_is_active()) {
+    setcookie('critical_path_css_cached', TRUE, time() + 604800, '/');
   }
 }
 
@@ -22,7 +22,7 @@ function critical_path_css_process_html(&$vars) {
   // Only on first page load (nothing cached, cookie not set)
   // we inline the critical path CSS and load the rest of the
   // CSS files via loadCSS custom JS function
-  if (_critical_path_css_is_active() && (!isset($_COOKIE['critical_path_css_cached']) || $_COOKIE['glacier_assets_cached'] == FALSE)) {
+  if (_critical_path_css_is_active()) {
     // More info about loadCSS https://github.com/filamentgroup/loadCSS
     $script = 'function loadCSS(e,t,n){"use strict";var i=window.document.createElement("link");var o=t||window.document.getElementsByTagName("script")[0];i.rel="stylesheet";i.href=e;i.media="only x";o.parentNode.insertBefore(i,o);setTimeout(function(){i.media=n||"all"})}';
 
@@ -33,16 +33,67 @@ function critical_path_css_process_html(&$vars) {
       $script .= 'loadCSS("' . $file . '");';
     }
     // Load critical path CSS
-    $critical_path_css = file_get_contents(drupal_get_path('theme', 'spattstrasse') . '/css/critical.min.css');
+    $critical_path_css = _critical_path_css_get_inline_css();
     // Remove <link> tags from styles
     $vars['styles'] = preg_replace('#\<link(.+?)\/\>#', '', $vars['styles']);
     // Add the inlined critical path CSS code to the styles variable
-    $vars['styles'] = str_replace('</style>', $critical_path_css . '</style>', $vars['styles']);
+    $vars['styles'] .= '<style>' . $critical_path_css . '</style>';
     // Add the loadCSS code to the scripts variable
     $vars['scripts'] .= '<script>' . $script . '</script>';
   }
 }
 
+/**
+ * Implements hook_form_alter().
+ */
+function critical_path_css_form_alter(&$form, &$form_state, $form_id) {
+  $form['critical_path_css'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Critical Path CSS'),
+    '#description' => t('External CSS stylesheets are render-blocking, meaning the browser won’t paint content to the screen until all of your CSS – specifically, media="screen" CSS – arrives. The solution to this is inlining the initially needed (above-the-fold) CSS for your page and loading the rest of your CSS when the page is ready. Read more about critical path css: @more_info_link', array('@more_info_link' => 'http://addyosmani.com/blog/tag/critical-path-css')),
+  );
+  $form['critical_path_css']['critical_path_css'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Inline critical path css'),
+    '#default_value' => variable_get('critical_path_css', 0),
+  );
+  $form['critical_path_css']['critical_path_css_paths'] = array(
+    '#type' => 'textarea',
+    '#title' => t('File paths of CSS files that should be inlined'),
+    '#description' => t('One file path per line. File paths must be relative to the drupal installation directory!'),
+    '#default_value' => variable_get('critical_path_css_paths', ''),
+  );
+}
+
 function _critical_path_css_is_active() {
-  return (function_exists('path_is_admin') ? !path_is_admin(current_path()) : TRUE) && variable_get('preprocess_css');
+  return variable_get('critical_path_css') &&
+         variable_get('preprocess_css') &&
+         (function_exists('path_is_admin') ? !path_is_admin(current_path()) : TRUE) &&
+         !isset($_COOKIE['critical_path_css_cached']);
+}
+
+/**
+ * Load CSS code of the critical path CSS files and cache it
+ * @return string inline CSS code
+ */
+function _critical_path_css_get_inline_css() {
+  $inline_css = &drupal_static(__FUNCTION__);
+  if (!isset($inline_css)) {
+    // Load inline CSS code from cache if available
+    if ($cache = cache_get('critical_path_css_inline_css')) {
+      $inline_css = $cache->data;
+    }
+    else {
+      // Load inline CSS code from file paths
+      $file_paths = explode("\r\n", variable_get('critical_path_css_paths'));
+      foreach ($file_paths as $file_path) {
+        if (is_file($file_path)) {
+          $inline_css .= file_get_contents($file_path);
+        }
+      }
+      // Save inline CSS code in the cache
+      cache_set('critical_path_css_inline_css', $inline_css, 'cache');
+    }
+  }
+  return $inline_css;
 }
