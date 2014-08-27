@@ -10,7 +10,7 @@
  */
 function critical_path_css_boot() {
   // After first load CSS files should already be cached
-  if (_critical_path_css_is_active() && !isset($_COOKIE['critical_path_css_cached'])) {
+  if (variable_get('preprocess_css') && !isset($_COOKIE['critical_path_css_cached'])) {
     setcookie('glacier_assets_cached', TRUE, time() + 604800, '/');
   }
 }
