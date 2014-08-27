@@ -10,7 +10,7 @@
  */
 function critical_path_css_boot() {
   // After first load CSS files should already be cached
-  if (variable_get('preprocess_css') && !isset($_COOKIE['critical_path_css_cached'])) {
+  if (_critical_path_css_is_active() && !isset($_COOKIE['critical_path_css_cached'])) {
     setcookie('glacier_assets_cached', TRUE, time() + 604800, '/');
   }
 }
@@ -44,5 +44,5 @@ function critical_path_css_process_html(&$vars) {
 }
 
 function _critical_path_css_is_active() {
-  return path_is_admin(current_path()) && variable_get('preprocess_css');
+  return (function_exists('path_is_admin') ? path_is_admin(current_path()) : TRUE) && variable_get('preprocess_css');
 }
