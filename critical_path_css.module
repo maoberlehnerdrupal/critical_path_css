@@ -44,5 +44,5 @@ function critical_path_css_process_html(&$vars) {
 }
 
 function _critical_path_css_is_active() {
-  return (function_exists('path_is_admin') ? path_is_admin(current_path()) : TRUE) && variable_get('preprocess_css');
+  return (function_exists('path_is_admin') ? !path_is_admin(current_path()) : TRUE) && variable_get('preprocess_css');
 }
