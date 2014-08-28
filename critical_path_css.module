@@ -46,7 +46,7 @@ function critical_path_css_process_html(&$vars) {
 /**
  * Implements hook_form_alter().
  */
-function critical_path_css_form_alter(&$form, &$form_state, $form_id) {
+function critical_path_css_form_system_performance_settings_alter(&$form, &$form_state, $form_id) {
   $form['critical_path_css'] = array(
     '#type' => 'fieldset',
     '#title' => t('Critical Path CSS'),
