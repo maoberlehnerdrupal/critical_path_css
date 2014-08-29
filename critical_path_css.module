@@ -1,8 +1,8 @@
 <?php
 
 /**
- * @todo admin interface to activate and enter path to the critical path css file / warn if file not exists
- * @todo check if cache module is configured
+ * @file
+ * Inline critical CSS styles
  */
 
 /**
