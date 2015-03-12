@@ -6,38 +6,33 @@
  */
 
 /**
- * Implements hook_boot().
- */
-function critical_path_css_boot() {
-  // After first load CSS files should already be cached
-  if (_critical_path_css_is_active()) {
-    setcookie('critical_path_css_cached', TRUE, time() + 604800, '/');
-  }
-}
-
-/**
  * Implements template_process_html().
  */
 function critical_path_css_process_html(&$vars) {
-  // Only on first page load (nothing cached, cookie not set)
-  // we inline the critical path CSS and load the rest of the
-  // CSS files via loadCSS custom JS function
+  // Inline CSS needed to render the critical path and load
+  // the rest of the CSS files via loadCSS custom JS function
+  // More infos about loadCSS https://github.com/filamentgroup/loadCSS
   if (_critical_path_css_is_active()) {
-    // More info about loadCSS https://github.com/filamentgroup/loadCSS
     $script = 'function loadCSS(e,t,n){"use strict";var i=window.document.createElement("link");var o=t||window.document.getElementsByTagName("script")[0];i.rel="stylesheet";i.href=e;i.media="only x";o.parentNode.insertBefore(i,o);setTimeout(function(){i.media=n||"all"})}';
 
-    // Find all paths of the cached stylesheets
-    preg_match_all('#href="(.+?)"#', $vars['styles'], $css);
+    // Find all stylesheets with "all" or "screen" media attribute
+    preg_match_all('#href="(.+?)" media="(all|screen)"#', $vars['styles'], $css);
+    // Remove <link> tags with "all" or "screen" media attribute from styles
+    $vars['styles'] = preg_replace('#\<link(.+?)media="(all|screen)" \/\>#', '', $vars['styles']);
+    // Add <noscript> tag as fallback if JavaScript is disabled
+    $noscript = '';
     // Add a loadCSS function for every stylesheet
-    foreach ($css[1] as $file) {
+    // and wrap <link> tags with the <noscript> tag
+    foreach ($css[1] as $k => $file) {
       $script .= 'loadCSS("' . $file . '");';
+      $noscript .= '<link rel="stylesheet" href="' . $file . '" />';
     }
     // Load critical path CSS
     $critical_path_css = _critical_path_css_get_inline_css();
-    // Remove <link> tags from styles
-    $vars['styles'] = preg_replace('#\<link(.+?)\/\>#', '', $vars['styles']);
     // Add the inlined critical path CSS code to the styles variable
     $vars['styles'] .= '<style>' . $critical_path_css . '</style>';
+    // Inject <noscript> tag
+    $vars['styles'] .= '<noscript>' . $noscript . '</noscript>';
     // Add the loadCSS code to the scripts variable
     $vars['scripts'] .= '<script>' . $script . '</script>';
   }
@@ -68,8 +63,7 @@ function critical_path_css_form_system_performance_settings_alter(&$form, &$form
 function _critical_path_css_is_active() {
   return variable_get('critical_path_css') &&
          variable_get('preprocess_css') &&
-         (function_exists('path_is_admin') ? !path_is_admin(current_path()) : TRUE) &&
-         !isset($_COOKIE['critical_path_css_cached']);
+         (function_exists('path_is_admin') ? !path_is_admin(current_path()) : TRUE);
 }
 
 /**
