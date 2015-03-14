@@ -33,8 +33,8 @@ function critical_path_css_process_html(&$vars) {
     $vars['styles'] .= '<style>' . $critical_path_css . '</style>';
     // Inject <noscript> tag
     $vars['styles'] .= '<noscript>' . $noscript . '</noscript>';
-    // Add the loadCSS code to the scripts variable
-    $vars['scripts'] .= '<script>' . $script . '</script>';
+    // Add the loadCSS code to the page bottom
+    $vars['page_bottom'] .= '<script>' . $script . '</script>';
   }
 }
 
