@@ -1,6 +1,6 @@
 name = Critical Path CSS
 description = Inline critical CSS styles
-package = CSS
 core = 7.x
+package = CSS
 version = "7.x-2.0"
 project = "critical_path_css"
