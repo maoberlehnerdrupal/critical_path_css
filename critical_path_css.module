@@ -6,6 +6,11 @@
  */
 
 /**
+ * Define the maximal file size the inline CSS styles should have (in KB).
+ */
+define('CRITICAL_PATH_CSS_MAX_FILE_SIZE', 14);
+
+/**
  * Implements template_process_html().
  */
 function critical_path_css_process_html(&$vars) {
@@ -52,6 +57,11 @@ function critical_path_css_form_system_performance_settings_alter(&$form, &$form
     '#title' => t('Inline critical path css'),
     '#default_value' => variable_get('critical_path_css', 0),
   );
+  $form['critical_path_css']['critical_path_css_file_size_check'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Check if the file size of inline styles is below @max_file_size KB', array('@max_file_size' => CRITICAL_PATH_CSS_MAX_FILE_SIZE)),
+    '#default_value' => variable_get('critical_path_css_file_size_check', 1),
+  );
   $form['critical_path_css']['critical_path_css_paths'] = array(
     '#type' => 'textarea',
     '#title' => t('File paths of CSS files that should be inlined'),
@@ -87,6 +97,20 @@ function _critical_path_css_get_inline_css() {
       }
       // Save inline CSS code in the cache
       cache_set('critical_path_css_inline_css', $inline_css, 'cache');
+    }
+  }
+  // Check the file size of the inline styles
+  if (variable_get('critical_path_css_file_size_check', 1)) {
+    // Get the string length / bytes of the inline styles
+    if (function_exists('mb_strlen')) {
+      $size = mb_strlen($inline_css, '8bit');
+    }
+    else {
+      $size = strlen($inline_css);
+    }
+    // Print a warning if the size ist to big
+    if (($size / 1024) > CRITICAL_PATH_CSS_MAX_FILE_SIZE) {
+      drupal_set_message(t('The size of the inlined CSS styles is @file_size. The file size should be bellow @max_file_size.', array('@file_size' => format_size($size), '@max_file_size' => CRITICAL_PATH_CSS_MAX_FILE_SIZE . ' KB')), 'warning');
     }
   }
   return $inline_css;
